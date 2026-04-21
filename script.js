@@ -317,7 +317,7 @@ playBtn.addEventListener('click', () => {
     if (isPlaying) return;
     isPlaying = true; currentStep = 0; nextNoteTime = audioCtx.currentTime + 0.05;
     scheduler();
-    playBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg><span>Duraklat</span>';
+    playBtn.innerText = '⏸';
     const vocalAudio = document.getElementById('vocalAudio');
     if (vocalAudio && vocalAudio.src) vocalAudio.play();
 });
@@ -325,7 +325,7 @@ playBtn.addEventListener('click', () => {
 stopBtn.addEventListener('click', () => {
     isPlaying = false; window.clearTimeout(timerID); currentStep = 0;
     document.querySelectorAll('.step-dot').forEach(dot => dot.classList.remove('active'));
-    playBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><span>Başlat</span>';
+    playBtn.innerText = '▶';
     const vocalAudio = document.getElementById('vocalAudio');
     if (vocalAudio && vocalAudio.src) {
         vocalAudio.pause();
