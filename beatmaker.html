@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiNUbeatmaker - Stüdyo</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="db.js"></script>
+    <script>checkAuth();</script>
+</head>
+<body>
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="user-nav">
+        <div class="user-info">
+            <span id="welcomeUser"></span>
+        </div>
+        <div class="nav-actions">
+            <button class="btn-secondary btn-sm" onclick="toggleTheme()">Tema Değiştir</button>
+            <button class="btn-secondary btn-sm" onclick="showSettings()">Ayarlar</button>
+            <button class="btn-secondary btn-sm" onclick="showMyBeats()">Kayıtlı Ritimlerim</button>
+            <button class="btn-danger btn-sm" onclick="logoutUser()">Çıkış Yap</button>
+        </div>
+    </div>
+
+    <main class="app-container">
+        <header>
+            <h1>SiNUbeatmaker Stüdyo</h1>
+            <p class="subtitle">Kendi ritmini ve sesini birleştir</p>
+        </header>
+
+        <section class="controls">
+            <div class="control-group">
+                <button id="playBtn" class="btn-primary">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <span>Başlat</span>
+                </button>
+                <button id="stopBtn" class="btn-secondary">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                    <span>Durdur</span>
+                </button>
+                <button id="clearBtn" class="btn-secondary">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M19 4h-3.5l-1-1h-5l-1 1H5v2h14M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12Z"/></svg>
+                    <span>Temizle</span>
+                </button>
+            </div>
+
+            <div class="bpm-control">
+                <label for="bpmSlider">Tempo:</label>
+                <input type="range" id="bpmSlider" class="bpm-slider" min="60" max="200" value="120" step="1">
+                <span id="bpmValue" class="bpm-value">120</span>
+            </div>
+
+            <div class="step-control" style="display: flex; flex-direction: column; align-items: center; margin-left: 15px;">
+                <label for="stepSelect" style="font-size: 0.9rem; margin-bottom: 5px; color: var(--text-secondary);">Uzunluk:</label>
+                <select id="stepSelect" style="padding: 5px; border-radius: 5px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">
+                    <option value="16">16 Adım</option>
+                    <option value="32">32 Adım</option>
+                    <option value="48">48 Adım</option>
+                    <option value="64">64 Adım</option>
+                </select>
+            </div>
+            
+            <div class="save-control">
+                 <button id="saveBeatBtn" class="btn-primary" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <span>Ritmi Kaydet</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Sequencer -->
+        <section class="sequencer" id="sequencer" style="position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-secondary);"></h3>
+                <div id="recordTimer" style="color: #ef4444; font-weight: bold; font-family: monospace; font-size: 1.2rem; display: none; background: rgba(239, 68, 68, 0.1); padding: 5px 15px; border-radius: 20px;">Kayıt: 00:00</div>
+            </div>
+            <div class="sequencer-scroll-container" style="overflow-x: auto; padding-bottom: 15px;">
+                <div class="track step-indicator-track" style="background: transparent; border: none; margin-bottom: -15px; padding-bottom: 0;"><div class="track-label" style="opacity: 0;">Ind</div><div class="pads-container" id="stepIndicator"></div></div>
+                <div class="track" data-instrument="kick"><div class="track-label">Kick</div><div class="pads-container"></div></div>
+                <div class="track" data-instrument="snare"><div class="track-label">Snare</div><div class="pads-container"></div></div>
+                <div class="track" data-instrument="hihat"><div class="track-label">Hi-Hat</div><div class="pads-container"></div></div>
+                <div class="track" data-instrument="openhat"><div class="track-label">O-Hat</div><div class="pads-container"></div></div>
+                <div class="track" data-instrument="tom"><div class="track-label">Tom</div><div class="pads-container"></div></div>
+                <div class="track" data-instrument="clap"><div class="track-label">Clap</div><div class="pads-container"></div></div>
+                <div class="track" data-instrument="perc"><div class="track-label">Perc</div><div class="pads-container"></div></div>
+                <div class="track" data-instrument="bass"><div class="track-label">Bass</div><div class="pads-container"></div></div>
+                
+                <!-- Adım Numaraları -->
+                <div class="track step-numbers-track" style="background: transparent; border: none; margin-top: -5px;"><div class="track-label" style="opacity: 0;">No</div><div class="pads-container" id="stepNumbersContainer"></div></div>
+            </div>
+        </section>
+
+        <!-- Audio Recording Section -->
+        <section class="recording-section">
+            <h3 style="margin-bottom: 15px;">Kayıt, Vokal & Dışa Aktarma</h3>
+            
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px;">
+                <!-- Dışarıdan Ses Yükleme (Vokal) -->
+                <div class="import-vocal" style="flex: 1; min-width: 250px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;">
+                    <h4>1. Harici Vokal/Ses Ekle</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Kendi kaydettiğin bir vokali (.mp3, .wav) yükleyip beat ile birlikte çalabilirsin.</p>
+                    <input type="file" id="vocalUpload" accept="audio/*" style="width:100%; margin-bottom:10px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1); color: white;">
+                    <audio id="vocalAudio" controls style="width: 100%; display: none; margin-top: 10px;"></audio>
+                </div>
+
+                <!-- Kayıt & İndirme -->
+                <div class="export-mix" style="flex: 1; min-width: 250px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;">
+                    <h4>2. Stüdyoyu Kaydet (Dışa Aktar)</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Beat'i veya üzerine mikrofonla okuduğun parçayı ses dosyası olarak kaydet.</p>
+                    <div class="record-controls" style="display: flex; gap: 10px; flex-direction: column;">
+                        <button id="recordBeatOnlyBtn" class="btn-secondary w-100" style="color: #3b82f6; border-color: #3b82f6; justify-content: center;">
+                            <span class="record-dot" style="background:#3b82f6; box-shadow: 0 0 8px #3b82f6;"></span> Sadece Sistem Sesini Kaydet
+                        </button>
+                        <button id="recordBtn" class="btn-secondary w-100" style="color: #ef4444; border-color: #ef4444; justify-content: center;">
+                            <span class="record-dot"></span> Canlı Kayıt (Mikrofon ile Oku)
+                        </button>
+                        <button id="downloadBtn" class="btn-primary w-100" style="display:none; margin-top:5px; justify-content: center;">
+                            Oluşan Şarkıyı İndir (.mp3)
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="playbackContainer" style="display:none; background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3); position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="color: #10b981; margin: 0;">Kaydın Hazır! Dinle ve İndir</h4>
+                    <button class="btn-danger btn-sm" onclick="deleteCurrentRecording()" style="padding: 4px 10px; font-size: 0.8rem; background: #ef4444;">Kaydı Çöpe At</button>
+                </div>
+                <audio id="audioPlayback" controls style="width: 100%;"></audio>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for My Beats -->
+    <div id="myBeatsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Kayıtlı Ritimlerim</h2>
+            <ul id="beatsList" class="beats-list"></ul>
+        </div>
+    </div>
+
+    <!-- Modal for Settings -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSettingsModal()">&times;</span>
+            <h2>Ayarlar</h2>
+            <div class="form-group" style="margin-top:20px;">
+                <label>Görünen Adın (Nickname)</label>
+                <input type="text" id="nicknameInput" required>
+            </div>
+            <button class="btn-primary w-100" onclick="saveNickname()">Kaydet</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

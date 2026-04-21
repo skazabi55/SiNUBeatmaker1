@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Paneli - SiNUbeatmaker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="db.js"></script>
+    <script>checkAuth(true);</script>
+</head>
+<body>
+    <div class="bg-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="app-container admin-container">
+        <header class="admin-header">
+            <div>
+                <h1>Admin Paneli</h1>
+                <p class="subtitle">Kullanıcıları ve sesleri yönet</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-secondary" onclick="toggleTheme()">Tema Değiştir</button>
+                <button class="btn-secondary" onclick="logoutUser()">Çıkış Yap</button>
+            </div>
+        </header>
+
+        <div class="admin-grid">
+            <!-- Users Section -->
+            <section class="admin-section">
+                <h2>Kullanıcı Yönetimi</h2>
+                <div class="table-container">
+                    <table id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Kullanıcı Adı</th>
+                                <th>Rol</th>
+                                <th>Kayıtlı Ritimler</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersList"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Custom Sounds Section -->
+            <section class="admin-section">
+                <h2>Yeni Ritim/Ses Ekle</h2>
+                <form id="addSoundForm" class="add-sound-form">
+                    <div class="form-group">
+                        <label>Ses Adı (Örn: Lazer, Synth)</label>
+                        <input type="text" id="soundName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ses Dosyası (.mp3, .wav) Maks 1MB</label>
+                        <input type="file" id="soundFile" accept="audio/*" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Sisteme Ekle</button>
+                </form>
+
+                <h3 style="margin-top:20px;">Sistemdeki Sesler</h3>
+                <ul id="customSoundsList" class="sound-list"></ul>
+            </section>
+        </div>
+    </main>
+
+    <script src="admin.js"></script>
+</body>
+</html>
