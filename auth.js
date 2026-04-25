@@ -20,11 +20,15 @@ function generateUniqueCode() {
 
 // Temporary storage for registration data during 2FA
 let tempRegistrationData = null;
+// Temporary storage for password reset data
+let tempResetData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const twoFaForm = document.getElementById('twoFaForm');
+    const forgotForm = document.getElementById('forgotForm');
+    const resetForm2 = document.getElementById('resetForm');
     
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -86,12 +90,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 code: code
             };
             
-            // Simulating email sent via alert
-            alert(`--- SİMÜLASYON E-POSTA ---\nAlıcı: ${email}\n\nSiNUbeatmaker Kayıt Doğrulama Kodunuz: ${code}\n\nLütfen bu kodu ekrandaki alana giriniz.`);
+            // Send real verification email via n8n webhook
+            const submitBtn = registerForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.textContent = 'Doğrulama kodu gönderiliyor...';
+            submitBtn.disabled = true;
             
-            document.getElementById('registerBox').style.display = 'none';
-            document.getElementById('twoFaBox').style.display = 'block';
-            document.getElementById('twoFaError').style.display = 'none';
+            try {
+                const response = await fetch('http://localhost:5678/webhook/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, code: code })
+                });
+                
+                if (!response.ok) throw new Error('E-posta gönderilemedi');
+                
+                document.getElementById('registerBox').style.display = 'none';
+                document.getElementById('twoFaBox').style.display = 'block';
+                document.getElementById('twoFaError').style.display = 'none';
+            } catch (err) {
+                console.error('n8n webhook hatası:', err);
+                // Fallback: simülasyon olarak alert ile göster
+                alert(`E-posta servisi şu an çalışmıyor.\nDoğrulama kodunuz: ${code}`);
+                document.getElementById('registerBox').style.display = 'none';
+                document.getElementById('twoFaBox').style.display = 'block';
+                document.getElementById('twoFaError').style.display = 'none';
+            } finally {
+                submitBtn.textContent = originalBtnText;
+                submitBtn.disabled = false;
+            }
         });
     }
 
@@ -133,21 +160,116 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Forgot Password: Send reset code
+    if (forgotForm) {
+        forgotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('forgotEmail').value.trim();
+            const email = emailInput + '@gmail.com';
+            
+            const db = getDB();
+            const user = db.users.find(u => u.email === email);
+            
+            if (!user) {
+                document.getElementById('forgotError').textContent = 'Bu e-posta adresiyle kayıtlı bir hesap bulunamadı!';
+                document.getElementById('forgotError').style.display = 'block';
+                return;
+            }
+            
+            const code = generateUniqueCode();
+            tempResetData = { email: email, username: user.username, code: code };
+            
+            const submitBtn = forgotForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.textContent;
+            submitBtn.textContent = 'Kod gönderiliyor...';
+            submitBtn.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:5678/webhook/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, code: code })
+                });
+                if (!response.ok) throw new Error('E-posta gönderilemedi');
+            } catch (err) {
+                console.error('n8n webhook hatası:', err);
+                alert(`E-posta servisi şu an çalışmıyor.\nSıfırlama kodunuz: ${code}`);
+            } finally {
+                submitBtn.textContent = originalBtnText;
+                submitBtn.disabled = false;
+            }
+            
+            document.getElementById('forgotBox').style.display = 'none';
+            document.getElementById('resetBox').style.display = 'block';
+            document.getElementById('resetError').style.display = 'none';
+            document.getElementById('forgotError').style.display = 'none';
+        });
+    }
+
+    // Forgot Password: Verify code and set new password
+    if (resetForm2) {
+        resetForm2.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const codeInput = document.getElementById('resetCode').value.trim();
+            const newPass = document.getElementById('resetNewPassword').value;
+            const newPassConfirm = document.getElementById('resetNewPasswordConfirm').value;
+            
+            if (!tempResetData) {
+                alert('Sıfırlama verisi bulunamadı. Lütfen baştan başlayın.');
+                cancelForgot();
+                return;
+            }
+            
+            if (newPass !== newPassConfirm) {
+                document.getElementById('resetError').textContent = 'Şifreler eşleşmiyor!';
+                document.getElementById('resetError').style.display = 'block';
+                return;
+            }
+            
+            if (codeInput !== tempResetData.code) {
+                document.getElementById('resetError').textContent = 'Doğrulama kodu hatalı!';
+                document.getElementById('resetError').style.display = 'block';
+                return;
+            }
+            
+            // Update password in DB
+            const db = getDB();
+            const userIndex = db.users.findIndex(u => u.email === tempResetData.email);
+            if (userIndex !== -1) {
+                db.users[userIndex].passwordHash = await sha256(newPass);
+                saveDB(db);
+            }
+            
+            tempResetData = null;
+            alert('Şifreniz başarıyla güncellendi! Lütfen yeni şifrenizle giriş yapın.');
+            
+            document.getElementById('resetBox').style.display = 'none';
+            document.getElementById('loginBox').style.display = 'block';
+            resetForm2.reset();
+        });
+    }
 });
 
 function toggleForms() {
     const loginBox = document.getElementById('loginBox');
     const registerBox = document.getElementById('registerBox');
     const twoFaBox = document.getElementById('twoFaBox');
+    const forgotBox = document.getElementById('forgotBox');
+    const resetBox = document.getElementById('resetBox');
     
     if (loginBox.style.display === 'none') {
         loginBox.style.display = 'block';
         registerBox.style.display = 'none';
         twoFaBox.style.display = 'none';
+        if (forgotBox) forgotBox.style.display = 'none';
+        if (resetBox) resetBox.style.display = 'none';
     } else {
         loginBox.style.display = 'none';
         registerBox.style.display = 'block';
         twoFaBox.style.display = 'none';
+        if (forgotBox) forgotBox.style.display = 'none';
+        if (resetBox) resetBox.style.display = 'none';
     }
 }
 
@@ -156,4 +278,24 @@ function cancel2FA() {
     document.getElementById('twoFaForm').reset();
     document.getElementById('twoFaBox').style.display = 'none';
     document.getElementById('registerBox').style.display = 'block';
+}
+
+function showForgotPassword() {
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('registerBox').style.display = 'none';
+    document.getElementById('twoFaBox').style.display = 'none';
+    document.getElementById('forgotBox').style.display = 'block';
+    document.getElementById('resetBox').style.display = 'none';
+    document.getElementById('forgotError').style.display = 'none';
+}
+
+function cancelForgot() {
+    tempResetData = null;
+    document.getElementById('forgotBox').style.display = 'none';
+    document.getElementById('resetBox').style.display = 'none';
+    document.getElementById('loginBox').style.display = 'block';
+    const forgotForm = document.getElementById('forgotForm');
+    const resetForm = document.getElementById('resetForm');
+    if (forgotForm) forgotForm.reset();
+    if (resetForm) resetForm.reset();
 }

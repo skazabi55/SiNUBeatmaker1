@@ -18,6 +18,7 @@
                 <a href="#">Düzenle</a>
                 <a href="#" onclick="showSettings()">Ayarlar</a>
                 <a href="#" onclick="showMyBeats()">Ritimlerim</a>
+                <a href="profile.html">Profil</a>
             </nav>
         </div>
         <div class="header-right">
@@ -114,5 +115,13 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        // Auto-load beat from profile page
+        const loadBeatId = sessionStorage.getItem('loadBeatId');
+        if (loadBeatId) {
+            sessionStorage.removeItem('loadBeatId');
+            loadBeat(loadBeatId);
+        }
+    </script>
 </body>
 </html>
